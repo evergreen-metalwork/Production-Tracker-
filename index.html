@@ -652,6 +652,7 @@ setTimeout(updateFirebaseStatus, 1000);
                         <select id="pasteThickness"><option value="0.23">0.23mm</option><option value="0.27">0.27mm</option><option value="0.30">0.30mm</option><option value="0.35">0.35mm</option></select>
                     </div>
                     <div class="form-group"><label>Customer Name (Optional)</label><input type="text" id="pasteCustomer" placeholder="e.g., VIJI"></div>
+                    <div class="form-group"><label>Delivery Date (Optional)</label><input type="date" id="pasteDeliveryDate"></div>
                     <h4 style="color: #2d7a3e; margin: 30px 0 10px; padding-top: 20px; border-top: 2px solid #e8f5e9;">📋 Side Production Data (Group 1)</h4>
                     <div class="form-group"><label>Side Data</label><textarea id="sideData" placeholder="Paste entire table from Excel here..."></textarea></div>
                     <h4 style="color: #2d7a3e; margin: 30px 0 10px;">📋 Yoke Production Data (Group 2)</h4>
@@ -691,6 +692,7 @@ setTimeout(updateFirebaseStatus, 1000);
                     <div class="report-summary">
                         <div class="summary-box"><h4>Total Job Cards</h4><p id="monthlyJobCards">0</p></div>
                         <div class="summary-box"><h4>Completed Jobs</h4><p id="monthlyCompleted">0</p></div>
+                        <div class="summary-box"><h4>Dispatched Jobs</h4><p id="monthlyDispatched">0</p></div>
                         <div class="summary-box"><h4>Pending Jobs</h4><p id="monthlyPending">0</p></div>
                         
                     </div>
@@ -1841,6 +1843,7 @@ function parsePastedData() {
     const grade = document.getElementById('pasteGrade').value;
     const thickness = document.getElementById('pasteThickness').value;
     const customer = document.getElementById('pasteCustomer').value.trim();
+    const deliveryDate = document.getElementById('pasteDeliveryDate').value;
     
     const sideData = document.getElementById('sideData').value;
     const yokeData = document.getElementById('yokeData').value;
@@ -1871,6 +1874,7 @@ function parsePastedData() {
             thickness: thickness + 'mm',
             process: 'Standard',
             customer: customer || '',
+            deliveryDate: deliveryDate || null,
             groups,
             archived: false,
             held: false,
@@ -1890,6 +1894,7 @@ function parsePastedData() {
         document.getElementById('pasteProductionType').value = '';
         document.getElementById('pasteRating').value = '';
         document.getElementById('pasteCustomer').value = '';
+        document.getElementById('pasteDeliveryDate').value = '';
         document.getElementById('sideData').value = '';
         document.getElementById('yokeData').value = '';
         document.getElementById('centreData').value = '';
@@ -2113,6 +2118,24 @@ function updateMonthlyReport() {
         }
     });
     
+    // DISPATCHED JOB CARDS (from those added this month)
+    const dispatchedJobCards = [];
+    jobCardsAddedThisMonth.forEach(jobCard => {
+        const data = jobCardData[jobCard];
+        if (data && data.dispatched) {
+            // Check if dispatched in this month
+            if (data.dispatchedDate) {
+                const dispatchedDate = new Date(data.dispatchedDate);
+                if (dispatchedDate >= startDate && dispatchedDate <= endDate) {
+                    dispatchedJobCards.push(jobCard);
+                }
+            } else {
+                // If no dispatch date, just count if marked as dispatched
+                dispatchedJobCards.push(jobCard);
+            }
+        }
+    });
+    
     // PRODUCTION ENTRIES THIS MONTH (for chart - show completion trend)
     const monthlyEntries = productionEntries.filter(e => {
         if (e.endTime) {
@@ -2126,10 +2149,12 @@ function updateMonthlyReport() {
     // UPDATE DISPLAY
     const jobCardsEl = document.getElementById('monthlyJobCards');
     const completedEl = document.getElementById('monthlyCompleted');
+    const dispatchedEl = document.getElementById('monthlyDispatched');
     const pendingEl = document.getElementById('monthlyPending');
     
     if (jobCardsEl) jobCardsEl.textContent = jobCardsAddedThisMonth.length;
     if (completedEl) completedEl.textContent = completedJobCards.length;
+    if (dispatchedEl) dispatchedEl.textContent = dispatchedJobCards.length;
     if (pendingEl) pendingEl.textContent = jobCardsAddedThisMonth.length - completedJobCards.length;
     
     console.log('📊 Monthly Report Updated:', {
@@ -2137,6 +2162,7 @@ function updateMonthlyReport() {
         year: year,
         totalAdded: jobCardsAddedThisMonth.length,
         completed: completedJobCards.length,
+        dispatched: dispatchedJobCards.length,
         pending: jobCardsAddedThisMonth.length - completedJobCards.length,
         chartEntries: monthlyEntries.length
     });
