@@ -495,6 +495,10 @@ setTimeout(updateFirebaseStatus, 1000);
                             <option value="Step Lap">Step Lap</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label>🔍 Search Job Card</label>
+                        <input type="text" id="reporterSearchInput" placeholder="Search by Job Card, Work Order, or Customer...">
+                    </div>
                 </div>
                 <div class="sub-tab-container">
                     <button class="sub-tab active" data-subtab="started">Started</button>
@@ -551,7 +555,14 @@ setTimeout(updateFirebaseStatus, 1000);
                     <button class="submit-btn" id="recordBtn">Record Entry</button>
                 </div>
                 <div class="card">
-                    <h3 style="color: #2d7a3e; margin-bottom: 15px;" id="entriesHeader">Started Production</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="color: #2d7a3e; margin: 0;" id="entriesHeader">Started Production</h3>
+                        <button class="submit-btn" onclick="refreshProductionEntries()" style="padding: 8px 16px; font-size: 14px;">🔄 Refresh</button>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label>Filter by Week</label>
+                        <input type="week" id="weekFilter" style="max-width: 200px;">
+                    </div>
                     <div class="production-list" id="productionList">
                         <p style="text-align: center; color: #999;">No started items yet</p>
                     </div>
@@ -652,7 +663,6 @@ setTimeout(updateFirebaseStatus, 1000);
                         <select id="pasteThickness"><option value="0.23">0.23mm</option><option value="0.27">0.27mm</option><option value="0.30">0.30mm</option><option value="0.35">0.35mm</option></select>
                     </div>
                     <div class="form-group"><label>Customer Name (Optional)</label><input type="text" id="pasteCustomer" placeholder="e.g., VIJI"></div>
-                    <div class="form-group"><label>Delivery Date (Optional)</label><input type="date" id="pasteDeliveryDate"></div>
                     <h4 style="color: #2d7a3e; margin: 30px 0 10px; padding-top: 20px; border-top: 2px solid #e8f5e9;">📋 Side Production Data (Group 1)</h4>
                     <div class="form-group"><label>Side Data</label><textarea id="sideData" placeholder="Paste entire table from Excel here..."></textarea></div>
                     <h4 style="color: #2d7a3e; margin: 30px 0 10px;">📋 Yoke Production Data (Group 2)</h4>
@@ -672,6 +682,10 @@ setTimeout(updateFirebaseStatus, 1000);
                         <strong>Hold:</strong> Temporarily pauses job (removes from Reporter)<br>
                         <strong>Delete:</strong> Permanently removes ALL data (cannot be undone!)
                     </p>
+                    <div class="form-group">
+                        <label>🔍 Search Job Cards</label>
+                        <input type="text" id="manageSearchInput" placeholder="Search by Job Card, Work Order, or Customer..." style="margin-bottom: 15px;">
+                    </div>
                     <div class="job-card-list" id="jobCardList"></div>
                 </div>
             </div>
@@ -692,9 +706,23 @@ setTimeout(updateFirebaseStatus, 1000);
                     <div class="report-summary">
                         <div class="summary-box"><h4>Total Job Cards</h4><p id="monthlyJobCards">0</p></div>
                         <div class="summary-box"><h4>Completed Jobs</h4><p id="monthlyCompleted">0</p></div>
-                        <div class="summary-box"><h4>Dispatched Jobs</h4><p id="monthlyDispatched">0</p></div>
+                        <div class="summary-box" onclick="showDispatchedDetails()" style="cursor: pointer; transition: all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            <h4>Dispatched Jobs 📋</h4>
+                            <p id="monthlyDispatched">0</p>
+                        </div>
                         <div class="summary-box"><h4>Pending Jobs</h4><p id="monthlyPending">0</p></div>
                         
+                    </div>
+                    
+                    <!-- Dispatched Details Modal -->
+                    <div id="dispatchedModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow: auto;">
+                        <div style="background: white; margin: 50px auto; padding: 30px; max-width: 800px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h2 style="color: #2d7a3e; margin: 0;">Dispatched Job Cards</h2>
+                                <button onclick="closeDispatchedModal()" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕ Close</button>
+                            </div>
+                            <div id="dispatchedDetailsList"></div>
+                        </div>
                     </div>
                     <div class="card" style="background: #f8f9fa;">
                         <h3 style="color: #2d7a3e; margin-bottom: 15px;">Production Trend</h3>
@@ -1180,6 +1208,31 @@ const jobCardSelect = document.getElementById('jobCard');
     }
     document.getElementById('itemType').addEventListener('change', updateWidths);
     document.getElementById('productionTypeFilter').addEventListener('change', filterJobCardsByType);
+    
+    // Reporter search functionality
+    const reporterSearchInput = document.getElementById('reporterSearchInput');
+    if (reporterSearchInput) {
+        reporterSearchInput.addEventListener('input', function() {
+            populateJobCardDropdowns();
+        });
+    }
+    
+    // Manage Jobs search functionality
+    const manageSearchInput = document.getElementById('manageSearchInput');
+    if (manageSearchInput) {
+        manageSearchInput.addEventListener('input', function() {
+            displayJobCardList();
+        });
+    }
+    
+    // Week filter functionality
+    const weekFilter = document.getElementById('weekFilter');
+    if (weekFilter) {
+        weekFilter.addEventListener('change', function() {
+            displayProductionList();
+        });
+    }
+    
     document.getElementById('dashboardJobCard').addEventListener('change', debouncedDashboardHandler);
     document.getElementById('reportMonth').addEventListener('change', updateMonthlyReport);
     document.getElementById('reportYear').addEventListener('change', updateMonthlyReport);
@@ -1313,18 +1366,38 @@ function getJobCardsList(forceRefresh = false) {
 function populateJobCardDropdowns() {
     const jobCards = getJobCardsList(); // Sorted, cached list
     
+    // Get search term from Reporter tab if it exists
+    const searchInput = document.getElementById('reporterSearchInput');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    
+    // Filter job cards based on search
+    let filteredJobCards = jobCards;
+    if (searchTerm) {
+        filteredJobCards = jobCards.filter(jobCard => {
+            const data = jobCardData[jobCard];
+            const jobCardLower = jobCard.toLowerCase();
+            const workOrderLower = (data.workOrder || '').toLowerCase();
+            const customerLower = (data.customer || '').toLowerCase();
+            
+            return jobCardLower.includes(searchTerm) ||
+                   workOrderLower.includes(searchTerm) ||
+                   customerLower.includes(searchTerm);
+        });
+    }
+    
     // Populate Reporter dropdown (jobCard)
     const reporterSelect = document.getElementById('jobCard');
     if (reporterSelect) {
         const currentValue = reporterSelect.value; // Preserve selection
         reporterSelect.innerHTML = '<option value="">Select Job Card</option>';
         
-        jobCards.forEach(jobCard => {
+        filteredJobCards.forEach(jobCard => {
             const data = jobCardData[jobCard];
             const option = document.createElement('option');
             option.value = jobCard;
-            let label = jobCard;
-            if (data.held) label += ' (On Hold)';
+            let label = `${jobCard} - ${data.workOrder}`;
+            if (data.customer) label += ` (${data.customer})`;
+            if (data.held) label += ' [On Hold]';
             option.textContent = label;
             reporterSelect.appendChild(option);
         });
@@ -1351,7 +1424,7 @@ function populateJobCardDropdowns() {
         if (currentValue) dashboardSelect.value = currentValue; // Restore selection
     }
     
-    console.log('Dropdowns populated with', jobCards.length, 'job cards (sorted)');
+    console.log('Dropdowns populated with', filteredJobCards.length, 'job cards (sorted, filtered)');
 }
 
 // ========================================
@@ -1544,16 +1617,37 @@ function displayProductionList() {
 
     if (!listDiv || !header) return; // Guard: DOM not ready yet
 
+    // Get week filter value
+    const weekFilter = document.getElementById('weekFilter');
+    const selectedWeek = weekFilter ? weekFilter.value : '';
+    
     // Show ALL entries (both ongoing and completed) sorted newest first
-    const allEntries = [...productionEntries].sort((a, b) =>
+    let allEntries = [...productionEntries].sort((a, b) =>
         new Date(b.startTime) - new Date(a.startTime)
     );
-
-    header.textContent = 'Started Production';
+    
+    // Filter by week if selected
+    if (selectedWeek) {
+        const [year, week] = selectedWeek.split('-W');
+        const weekStart = getDateOfISOWeek(parseInt(week), parseInt(year));
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+        
+        allEntries = allEntries.filter(entry => {
+            const entryDate = new Date(entry.startTime);
+            return entryDate >= weekStart && entryDate < weekEnd;
+        });
+        
+        header.textContent = `Started Production - Week ${week}, ${year}`;
+    } else {
+        header.textContent = 'Started Production';
+    }
+    
     document.getElementById('recordBtn').textContent = 'Record Entry';
 
     if (allEntries.length === 0) {
-        listDiv.innerHTML = '<p style="text-align: center; color: #999;">No production items yet</p>';
+        const msg = selectedWeek ? 'No production items for this week' : 'No production items yet';
+        listDiv.innerHTML = `<p style="text-align: center; color: #999;">${msg}</p>`;
         return;
     }
 
@@ -1561,7 +1655,7 @@ function displayProductionList() {
     const MAX_DISPLAY = 100;
     const displayItems = allEntries.slice(0, MAX_DISPLAY);
 
-    if (allEntries.length > MAX_DISPLAY) {
+    if (allEntries.length > MAX_DISPLAY && !selectedWeek) {
         header.textContent = `Started Production (Showing latest ${MAX_DISPLAY} of ${allEntries.length})`;
     }
     
@@ -1596,6 +1690,25 @@ function displayProductionList() {
             </div>
         `;
     }).join('');
+}
+
+// Helper function to get date from ISO week number
+function getDateOfISOWeek(week, year) {
+    const simple = new Date(year, 0, 1 + (week - 1) * 7);
+    const dow = simple.getDay();
+    const ISOweekStart = simple;
+    if (dow <= 4)
+        ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+    else
+        ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
+    return ISOweekStart;
+}
+
+// Refresh production entries function
+function refreshProductionEntries() {
+    console.log('🔄 Refreshing production entries...');
+    displayProductionList();
+    alert('✅ Production entries refreshed!');
 }
 
 // ========================================
@@ -1843,7 +1956,6 @@ function parsePastedData() {
     const grade = document.getElementById('pasteGrade').value;
     const thickness = document.getElementById('pasteThickness').value;
     const customer = document.getElementById('pasteCustomer').value.trim();
-    const deliveryDate = document.getElementById('pasteDeliveryDate').value;
     
     const sideData = document.getElementById('sideData').value;
     const yokeData = document.getElementById('yokeData').value;
@@ -1874,7 +1986,6 @@ function parsePastedData() {
             thickness: thickness + 'mm',
             process: 'Standard',
             customer: customer || '',
-            deliveryDate: deliveryDate || null,
             groups,
             archived: false,
             held: false,
@@ -1894,7 +2005,6 @@ function parsePastedData() {
         document.getElementById('pasteProductionType').value = '';
         document.getElementById('pasteRating').value = '';
         document.getElementById('pasteCustomer').value = '';
-        document.getElementById('pasteDeliveryDate').value = '';
         document.getElementById('sideData').value = '';
         document.getElementById('yokeData').value = '';
         document.getElementById('centreData').value = '';
@@ -1912,7 +2022,11 @@ function parseWidthData(data) {
     const widths = {};
     
     lines.forEach((line, index) => {
-        if (index === 0) return;
+        // Smart header detection - only skip if line actually contains header keywords
+        const lowerLine = line.toLowerCase();
+        if (lowerLine.includes('width') || lowerLine.includes('blades') || lowerLine.includes('weight')) {
+            return; // Skip actual header lines
+        }
         
         const parts = line.split('\t').map(p => p.trim()).filter(p => p);
         
@@ -1922,7 +2036,7 @@ function parseWidthData(data) {
             const weight = parseFloat(parts[2]);
             
             const numWidth = parseFloat(width);
-            if (!isNaN(numWidth) && !isNaN(blades) && !isNaN(weight) && width.toLowerCase() !== 'width') {
+            if (!isNaN(numWidth) && !isNaN(blades) && !isNaN(weight)) {
                 widths[numWidth.toString()] = { blades, weight };
             }
         }
@@ -1939,10 +2053,30 @@ function displayJobCardList() {
     const listDiv = document.getElementById('jobCardList');
     if (!listDiv) return;
 
-    const jobCards = getJobCardsList(true); // Use sorted list
+    let jobCards = getJobCardsList(true); // Use sorted list
+    
+    // Get search term
+    const searchInput = document.getElementById('manageSearchInput');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    
+    // Filter based on search
+    if (searchTerm) {
+        jobCards = jobCards.filter(jobCard => {
+            const data = jobCardData[jobCard];
+            const jobCardLower = jobCard.toLowerCase();
+            const workOrderLower = (data.workOrder || '').toLowerCase();
+            const customerLower = (data.customer || '').toLowerCase();
+            
+            return jobCardLower.includes(searchTerm) ||
+                   workOrderLower.includes(searchTerm) ||
+                   customerLower.includes(searchTerm);
+        });
+    }
     
     if (jobCards.length === 0) {
-        listDiv.innerHTML = '<p style="text-align: center; color: #999;">No job cards yet</p>';
+        listDiv.innerHTML = searchTerm ? 
+            '<p style="text-align: center; color: #999;">No job cards match your search</p>' :
+            '<p style="text-align: center; color: #999;">No job cards yet</p>';
         return;
     }
     
@@ -2130,11 +2264,14 @@ function updateMonthlyReport() {
                     dispatchedJobCards.push(jobCard);
                 }
             } else {
-                // If no dispatch date, just count if marked as dispatched
+                // If no dispatch date but marked as dispatched, count it
                 dispatchedJobCards.push(jobCard);
             }
         }
     });
+    
+    // Store for modal access
+    window.currentDispatchedJobs = dispatchedJobCards;
     
     // PRODUCTION ENTRIES THIS MONTH (for chart - show completion trend)
     const monthlyEntries = productionEntries.filter(e => {
@@ -3061,6 +3198,48 @@ function showLoading() {
 
 function hideLoading() {
     document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+// ========================================
+// DISPATCHED DETAILS MODAL
+// ========================================
+
+function showDispatchedDetails() {
+    const modal = document.getElementById('dispatchedModal');
+    const detailsList = document.getElementById('dispatchedDetailsList');
+    
+    if (!window.currentDispatchedJobs || window.currentDispatchedJobs.length === 0) {
+        detailsList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No dispatched jobs for this month</p>';
+    } else {
+        detailsList.innerHTML = window.currentDispatchedJobs.map(jobCard => {
+            const data = jobCardData[jobCard];
+            const dispatchDate = data.dispatchedDate ? new Date(data.dispatchedDate).toLocaleDateString() : 'Unknown';
+            
+            return `
+                <div style="border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 8px; background: #f8f9fa;">
+                    <h4 style="color: #2d7a3e; margin: 0 0 8px 0;">${jobCard} - ${data.workOrder}</h4>
+                    <p style="margin: 4px 0; font-size: 14px;"><strong>Customer:</strong> ${data.customer || 'N/A'}</p>
+                    <p style="margin: 4px 0; font-size: 14px;"><strong>Type:</strong> ${data.productionType} | <strong>Grade:</strong> ${data.grade}</p>
+                    <p style="margin: 4px 0; font-size: 14px; color: #2196F3;"><strong>📤 Dispatched:</strong> ${dispatchDate}</p>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    modal.style.display = 'block';
+}
+
+function closeDispatchedModal() {
+    const modal = document.getElementById('dispatchedModal');
+    modal.style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('dispatchedModal');
+    if (event.target === modal) {
+        closeDispatchedModal();
+    }
 }
 
 
